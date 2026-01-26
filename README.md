@@ -20,26 +20,49 @@ A modern, spotlight-style clipboard manager for macOS built with Electron, React
 - **TailwindCSS**: Utility-first CSS framework for styling.
 - **electron-store**: Simple data persistence.
 
-## Installation 📦
+## Installation (For Developers) 💻
 
-1. Clone the repository:
+If you want to run the app from source or contribute:
+
+1. **Clone the repository**:
    ```bash
    git clone <repository-url>
    cd mac-paste
    ```
 
-2. Install dependencies:
+2. **Install dependencies**:
+   Run this command in the project root to install all required packages:
    ```bash
    npm install
    ```
 
-## Development 💻
+3. **Run in Development Mode**:
+   Starts the app with hot-reloading:
+   ```bash
+   npm run dev
+   ```
 
-Run the application in development mode with hot-reloading:
+## Installation (Build App) 📦
 
-```bash
-npm run dev
-```
+To create a standalone application (`.app` or `.dmg`) that you can install in your `/Applications` folder:
+
+1. **Build the production version**:
+   ```bash
+   npm run build
+   ```
+
+2. **Locate the Installer**:
+   After the build completes, check the `release/` or `dist/` directory for the `.dmg` file.
+
+3. **Install**:
+   Open the `.dmg` file and drag `mac-paste` to your Applications folder.
+
+## Permissions 🔒
+
+For the **Global Shortcut** (`Cmd+Shift+V`) and **Auto-Paste** features to work correctly, you may need to grant Accessibility permissions:
+
+1. Go to **System Settings** > **Privacy & Security** > **Accessibility**.
+2. Enable the toggle for `mac-paste` (or your Terminal if running in dev mode).
 
 ## Build 🏗️
 
