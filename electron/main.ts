@@ -34,36 +34,60 @@ interface SnippetItem {
 interface StoreSchema {
   history: HistoryItem[]
   snippets: SnippetItem[]
+  shortcut: string
+  windowBounds: { x: number; y: number; width: number; height: number } | null
+  followCursor: boolean
 }
+
+const DEFAULT_SHORTCUT = 'Command+Shift+V'
 
 const store = new Store<StoreSchema>({
   defaults: {
     history: [],
-    snippets: []
+    snippets: [],
+    shortcut: DEFAULT_SHORTCUT,
+    windowBounds: null,
+    followCursor: true
   }
 })
 
 let win: BrowserWindow | null
 
 function createWindow() {
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize
+  const savedBounds = store.get('windowBounds')
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize
   
+  const defaultWidth = 600
+  const defaultHeight = 400
+
   win = new BrowserWindow({
-    width: 600,
-    height: 400,
-    x: (width - 600) / 2,
-    y: height / 4, // Position slightly higher
+    width: savedBounds?.width || defaultWidth,
+    height: savedBounds?.height || defaultHeight,
+    x: savedBounds?.x !== undefined ? savedBounds.x : (screenWidth - defaultWidth) / 2,
+    y: savedBounds?.y !== undefined ? savedBounds.y : screenHeight / 4,
     frame: false, // Frameless for spotlight look
     show: false, // Startup hidden
     alwaysOnTop: true,
     movable: true,
-    resizable: false,
+    resizable: true, // Allow resizing
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
       nodeIntegration: false,
       contextIsolation: true,
     },
   })
+
+  // Save bounds on change
+  const saveBounds = () => {
+    if (!win) return
+    const bounds = win.getBounds()
+    // Don't save if it's currently at cursor and followCursor is active? 
+    // Actually better to just save it whenever user stops moving it.
+    store.set('windowBounds', bounds)
+  }
+
+  win.on('move', saveBounds)
+  win.on('resize', saveBounds)
 
   // Hide on blur
   win.on('blur', () => {
@@ -74,10 +98,13 @@ function createWindow() {
 
   win.webContents.on('did-finish-load', () => {
     win?.webContents.send('main-process-message', (new Date).toLocaleString())
-    // Send initial history
+    // Send initial data
     win?.webContents.send('history-update', store.get('history'))
-    // Send initial snippets
     win?.webContents.send('snippets-update', store.get('snippets'))
+    win?.webContents.send('shortcut-update', store.get('shortcut'))
+    win?.webContents.send('settings-update', {
+      followCursor: store.get('followCursor')
+    })
   })
 
   if (VITE_DEV_SERVER_URL) {
@@ -138,23 +165,28 @@ app.on('activate', () => {
 })
 
 const toggleWindow = () => {
-  const showAtCursor = (w: BrowserWindow) => {
-    const cursorPoint = screen.getCursorScreenPoint()
-    const currentDisplay = screen.getDisplayNearestPoint(cursorPoint)
-    const { x, y, width, height } = currentDisplay.workArea
-    const [winWidth, winHeight] = w.getSize()
+  const showWindow = (w: BrowserWindow) => {
+    const followCursor = store.get('followCursor')
+    
+    if (followCursor) {
+      const cursorPoint = screen.getCursorScreenPoint()
+      const currentDisplay = screen.getDisplayNearestPoint(cursorPoint)
+      const { x, y, width, height } = currentDisplay.workArea
+      const [winWidth, winHeight] = w.getSize()
 
-    // Position at cursor, but clamp so it doesn't go off-screen
-    let posX = cursorPoint.x
-    let posY = cursorPoint.y
+      // Position at cursor, but clamp so it doesn't go off-screen
+      let posX = cursorPoint.x
+      let posY = cursorPoint.y
 
-    // Keep within screen bounds
-    if (posX + winWidth > x + width) posX = x + width - winWidth
-    if (posY + winHeight > y + height) posY = y + height - winHeight
-    if (posX < x) posX = x
-    if (posY < y) posY = y
+      // Keep within screen bounds
+      if (posX + winWidth > x + width) posX = x + width - winWidth
+      if (posY + winHeight > y + height) posY = y + height - winHeight
+      if (posX < x) posX = x
+      if (posY < y) posY = y
 
-    w.setPosition(Math.round(posX), Math.round(posY))
+      w.setPosition(Math.round(posX), Math.round(posY))
+    }
+
     w.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
     w.show()
     w.focus()
@@ -165,25 +197,31 @@ const toggleWindow = () => {
     if (win.isVisible()) {
       win.hide()
     } else {
-      showAtCursor(win)
+      showWindow(win)
     }
   } else {
     const w = createWindow()
-    showAtCursor(w)
+    showWindow(w)
   }
+}
+
+function registerShortcut(accelerator: string): boolean {
+  globalShortcut.unregisterAll()
+  const ret = globalShortcut.register(accelerator, () => {
+    toggleWindow()
+  })
+  if (!ret) {
+    console.log('Shortcut registration failed:', accelerator)
+  }
+  return ret
 }
 
 app.whenReady().then(() => {
   createWindow()
   
-  // Register Global Shortcut
-  const ret = globalShortcut.register('Command+Shift+V', () => {
-    toggleWindow()
-  })
-
-  if (!ret) {
-    console.log('registration failed')
-  }
+  // Register saved shortcut
+  const savedShortcut = store.get('shortcut')
+  registerShortcut(savedShortcut)
 
   startClipboardPolling()
 
@@ -218,6 +256,32 @@ app.whenReady().then(() => {
   
   ipcMain.on('hide-window', () => {
       win?.hide()
+  })
+
+  // Settings
+  ipcMain.on('get-shortcut', () => {
+    win?.webContents.send('shortcut-update', store.get('shortcut'))
+  })
+
+  ipcMain.on('update-shortcut', (_event, newShortcut: string) => {
+    const success = registerShortcut(newShortcut)
+    if (success) {
+      store.set('shortcut', newShortcut)
+      win?.webContents.send('shortcut-update', newShortcut)
+    } else {
+      // Revert to old shortcut
+      const old = store.get('shortcut')
+      registerShortcut(old)
+      win?.webContents.send('shortcut-error', 'Failed to register shortcut')
+      win?.webContents.send('shortcut-update', old)
+    }
+  })
+
+  ipcMain.on('update-settings', (_event, settings: { followCursor?: boolean }) => {
+    if (settings.followCursor !== undefined) {
+      store.set('followCursor', settings.followCursor)
+    }
+    win?.webContents.send('settings-update', settings)
   })
 
   // Snippets CRUD
