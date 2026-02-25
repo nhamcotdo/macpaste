@@ -24,13 +24,22 @@ interface HistoryItem {
   type: 'text'
 }
 
+interface SnippetItem {
+  id: string
+  title: string
+  content: string
+  createdAt: number
+}
+
 interface StoreSchema {
   history: HistoryItem[]
+  snippets: SnippetItem[]
 }
 
 const store = new Store<StoreSchema>({
   defaults: {
-    history: []
+    history: [],
+    snippets: []
   }
 })
 
@@ -67,6 +76,8 @@ function createWindow() {
     win?.webContents.send('main-process-message', (new Date).toLocaleString())
     // Send initial history
     win?.webContents.send('history-update', store.get('history'))
+    // Send initial snippets
+    win?.webContents.send('snippets-update', store.get('snippets'))
   })
 
   if (VITE_DEV_SERVER_URL) {
@@ -208,6 +219,47 @@ app.whenReady().then(() => {
   
   ipcMain.on('hide-window', () => {
       win?.hide()
+  })
+
+  // Snippets CRUD
+  ipcMain.on('add-snippet', (_event, snippet: { title: string; content: string }) => {
+    const snippets = store.get('snippets')
+    const newSnippet: SnippetItem = {
+      id: uuidv4(),
+      title: snippet.title,
+      content: snippet.content,
+      createdAt: Date.now()
+    }
+    const newSnippets = [newSnippet, ...snippets]
+    store.set('snippets', newSnippets)
+    win?.webContents.send('snippets-update', newSnippets)
+  })
+
+  ipcMain.on('update-snippet', (_event, updated: SnippetItem) => {
+    const snippets = store.get('snippets')
+    const newSnippets = snippets.map(s => s.id === updated.id ? { ...s, title: updated.title, content: updated.content } : s)
+    store.set('snippets', newSnippets)
+    win?.webContents.send('snippets-update', newSnippets)
+  })
+
+  ipcMain.on('delete-snippet', (_event, id: string) => {
+    const snippets = store.get('snippets')
+    const newSnippets = snippets.filter(s => s.id !== id)
+    store.set('snippets', newSnippets)
+    win?.webContents.send('snippets-update', newSnippets)
+  })
+
+  ipcMain.on('copy-snippet', (_event, content: string) => {
+    clipboard.writeText(content)
+    lastText = content
+    
+    // Hide window and simulate paste (same as history)
+    win?.hide()
+    setTimeout(() => {
+      exec(`osascript -e 'tell application "System Events" to keystroke "v" using command down'`, (error) => {
+        if (error) console.error("Paste failed:", error)
+      })
+    }, 100)
   })
 
 })
