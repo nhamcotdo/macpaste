@@ -138,38 +138,38 @@ app.on('activate', () => {
 })
 
 const toggleWindow = () => {
+  const showAtCursor = (w: BrowserWindow) => {
+    const cursorPoint = screen.getCursorScreenPoint()
+    const currentDisplay = screen.getDisplayNearestPoint(cursorPoint)
+    const { x, y, width, height } = currentDisplay.workArea
+    const [winWidth, winHeight] = w.getSize()
+
+    // Position at cursor, but clamp so it doesn't go off-screen
+    let posX = cursorPoint.x
+    let posY = cursorPoint.y
+
+    // Keep within screen bounds
+    if (posX + winWidth > x + width) posX = x + width - winWidth
+    if (posY + winHeight > y + height) posY = y + height - winHeight
+    if (posX < x) posX = x
+    if (posY < y) posY = y
+
+    w.setPosition(Math.round(posX), Math.round(posY))
+    w.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+    w.show()
+    w.focus()
+    w.setVisibleOnAllWorkspaces(false, { visibleOnFullScreen: true })
+  }
+
   if (win) {
     if (win.isVisible()) {
       win.hide()
     } else {
-      // Get current screen where the cursor is
-      const cursorPoint = screen.getCursorScreenPoint()
-      const currentDisplay = screen.getDisplayNearestPoint(cursorPoint)
-      const { x, y, width, height } = currentDisplay.workArea
-      
-      // Position window in the center of the current screen
-      const winWidth = 600
-      win.setPosition(
-        Math.round(x + (width - winWidth) / 2),
-        Math.round(y + height / 4) // Position slightly higher than center
-      )
-
-      win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true }); // Ensure visible even over full screen apps
-      win.show()
-      win.focus()
-      win.setVisibleOnAllWorkspaces(false, { visibleOnFullScreen: true }); // Reset usually helps with focus behavior
+      showAtCursor(win)
     }
   } else {
     const w = createWindow()
-    // Handle initial show for new window
-    const cursorPoint = screen.getCursorScreenPoint()
-    const currentDisplay = screen.getDisplayNearestPoint(cursorPoint)
-    const { x, y, width, height } = currentDisplay.workArea
-    w.setPosition(
-        Math.round(x + (width - 600) / 2),
-        Math.round(y + height / 4)
-    )
-    w.show()
+    showAtCursor(w)
   }
 }
 
@@ -196,13 +196,12 @@ app.whenReady().then(() => {
     // 2. Hide window
     win?.hide()
     
-    // 3. Simulate Paste
+    // 3. Simulate Paste (300ms to let macOS restore focus to previous app)
     setTimeout(() => {
-        // Use osascript to simulate Cmd+V
         exec(`osascript -e 'tell application "System Events" to keystroke "v" using command down'`, (error) => {
             if (error) console.error("Paste failed:", error)
         })
-    }, 100)
+    }, 300)
   })
   
   ipcMain.on('delete-item', (_event, id: string) => {
@@ -253,13 +252,13 @@ app.whenReady().then(() => {
     clipboard.writeText(content)
     lastText = content
     
-    // Hide window and simulate paste (same as history)
+    // Hide window and simulate paste (300ms to let macOS restore focus)
     win?.hide()
     setTimeout(() => {
       exec(`osascript -e 'tell application "System Events" to keystroke "v" using command down'`, (error) => {
         if (error) console.error("Paste failed:", error)
       })
-    }, 100)
+    }, 300)
   })
 
 })
