@@ -131,6 +131,18 @@ const toggleWindow = () => {
     if (win.isVisible()) {
       win.hide()
     } else {
+      // Get current screen where the cursor is
+      const cursorPoint = screen.getCursorScreenPoint()
+      const currentDisplay = screen.getDisplayNearestPoint(cursorPoint)
+      const { x, y, width, height } = currentDisplay.workArea
+      
+      // Position window in the center of the current screen
+      const winWidth = 600
+      win.setPosition(
+        Math.round(x + (width - winWidth) / 2),
+        Math.round(y + height / 4) // Position slightly higher than center
+      )
+
       win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true }); // Ensure visible even over full screen apps
       win.show()
       win.focus()
@@ -138,6 +150,14 @@ const toggleWindow = () => {
     }
   } else {
     const w = createWindow()
+    // Handle initial show for new window
+    const cursorPoint = screen.getCursorScreenPoint()
+    const currentDisplay = screen.getDisplayNearestPoint(cursorPoint)
+    const { x, y, width, height } = currentDisplay.workArea
+    w.setPosition(
+        Math.round(x + (width - 600) / 2),
+        Math.round(y + height / 4)
+    )
     w.show()
   }
 }
