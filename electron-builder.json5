@@ -11,11 +11,21 @@
     "dist",
     "dist-electron"
   ],
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "nhamcotdo",
+      "repo": "macpaste"
+    }
+  ],
   "mac": {
     "target": [
-      "dmg"
+      {
+        "target": "dmg",
+        "arch": ["arm64", "x64"]
+      }
     ],
-    "artifactName": "${productName}-Mac-${version}-Installer.${ext}"
+    "artifactName": "${productName}-Mac-${version}-${arch}.${ext}"
   },
   "win": {
     "target": [
@@ -41,3 +51,4 @@
     "artifactName": "${productName}-Linux-${version}.${ext}"
   }
 }
+
