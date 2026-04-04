@@ -26,7 +26,7 @@ jobs:
 
       - name: Build and publish (macOS DMG)
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run release -- --mac
 
   release-win:
@@ -49,5 +49,5 @@ jobs:
 
       - name: Build and publish (Windows installer)
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run release -- --win
