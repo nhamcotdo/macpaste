@@ -25,8 +25,13 @@
         "arch": ["arm64", "x64"]
       }
     ],
-    "artifactName": "${productName}-Mac-${version}-${arch}.${ext}"
+    "artifactName": "${productName}-Mac-${version}-${arch}.${ext}",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "build/entitlements.mac.plist",
+    "entitlementsInherit": "build/entitlements.mac.plist"
   },
+  "afterSign": "scripts/notarize.mjs",
   "win": {
     "target": [
       {

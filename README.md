@@ -1,6 +1,6 @@
 # MacPaste 📋
 
-> A modern, spotlight-style clipboard manager for macOS — built with Electron, React, and TailwindCSS.
+> A lightning-fast, spotlight-style clipboard manager for macOS — built with Electron, React, and TailwindCSS.
 
 [![Release](https://img.shields.io/github/v/release/nhamcotdo/macpaste?style=flat-square)](https://github.com/nhamcotdo/macpaste/releases/latest)
 [![License](https://img.shields.io/github/license/nhamcotdo/macpaste?style=flat-square)](LICENSE)
@@ -32,11 +32,14 @@ Go to the [**Releases page**](https://github.com/nhamcotdo/macpaste/releases/lat
 
 ### macOS Install
 
-1. Download the `.dmg` file matching your chip
-2. Open it and drag **MacPaste** to your `/Applications` folder
-3. Launch the app — grant **Accessibility** permission when prompted
-
-> **Note**: On first launch, macOS may block the app since it's not notarized. Go to **System Settings → Privacy & Security** and click **Open Anyway**.
+1. Download the `.dmg` file matching your chip (Apple Silicon or Intel).
+2. Open it and drag **MacPaste** into your `/Applications` folder.
+3. **Bypass Gatekeeper**: Since the app is not notarized by an Apple Developer ID, open **Terminal** and run the following command to remove the quarantine flag:
+   ```bash
+   xattr -cr /Applications/MacPaste.app
+   ```
+4. Launch MacPaste from your Applications folder.
+5. Grant **Accessibility** permissions when prompted (required for Auto-Paste and Global Shortcut).
 
 ---
 

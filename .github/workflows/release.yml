@@ -24,9 +24,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build and publish (macOS DMG)
+      - name: Build, sign, and publish (macOS DMG)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Code signing — base64-encoded .p12 certificate exported from Keychain
+          CSC_LINK: ${{ secrets.MAC_CERTS }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTS_PASSWORD }}
+          # Notarization — Apple ID credentials
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npm run release -- --mac
 
   release-win:
